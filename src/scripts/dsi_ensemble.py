@@ -29,8 +29,6 @@ from sklearn.metrics import (
 from scipy.stats import pearsonr
 from collections import OrderedDict
 import matplotlib.pyplot as plt
-from statsmodels.tsa.stattools import ccf
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 """# Model
 
@@ -165,7 +163,7 @@ def train_and_evaluate(
         model_filename = (
             f"LIVERPOOL_forecast_PM2.5_{forecast_hours}_{seq_length}_{name}.h5"
         )
-        save_dir = "DataFusion/models"
+        save_dir = "./models"
         model.save(os.path.join(save_dir, model_filename))
         print(
             f"Model {name} for {forecast_hours}-hour forecast saved as {model_filename}"
@@ -182,7 +180,7 @@ def train_and_evaluate(
 
 
 # Forecasting function
-def forecast(models, X, pred_length):
+def forecast(models, X, pred_length, seq_length):
     forecasts = {}
     for name, model in models.items():
         forecast = model.predict(X[-1].reshape(1, seq_length, X.shape[2]), verbose=0)
@@ -314,7 +312,7 @@ def plot_forecasts(data, forecasts, pred_length, title):
 
 data = {}
 data["station"] = pd.read_csv(
-    "../../data/processed/LIVERPOOL_PM2.5_hourly.csv",
+    "./data/processed/LIVERPOOL_PM2.5_hourly.csv",
     index_col="datetime",
     parse_dates=True,
 )
