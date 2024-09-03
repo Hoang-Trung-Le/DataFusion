@@ -161,7 +161,7 @@ def train_and_evaluate(
 
         # Save the model
         model_filename = (
-            f"LIVERPOOL_forecast_PM2.5_{forecast_hours}_{seq_length}_{name}"
+            f"LIVERPOOL_forecast_PM2.5_{seq_length}_{forecast_hours}_{name}.h5"
         )
         save_dir = "./models"
         model.save(os.path.join(save_dir, model_filename))
