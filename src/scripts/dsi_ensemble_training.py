@@ -65,50 +65,50 @@ def create_models(input_shape, output_length):
     )
     models["LSTM"] = lstm_model
 
-    # GRU
-    gru_model = Sequential(
-        [
-            GRU(128, activation="tanh", input_shape=input_shape),
-            Dense(64, activation="relu"),
-            Dense(output_length),
-        ]
-    )
-    models["GRU"] = gru_model
+    # # GRU
+    # gru_model = Sequential(
+    #     [
+    #         GRU(128, activation="tanh", input_shape=input_shape),
+    #         Dense(64, activation="relu"),
+    #         Dense(output_length),
+    #     ]
+    # )
+    # models["GRU"] = gru_model
 
-    # BiLSTM
-    bilstm_model = Sequential(
-        [
-            Bidirectional(LSTM(128, activation="tanh"), input_shape=input_shape),
-            Dense(64, activation="relu"),
-            Dense(output_length),
-        ]
-    )
-    models["BiLSTM"] = bilstm_model
+    # # BiLSTM
+    # bilstm_model = Sequential(
+    #     [
+    #         Bidirectional(LSTM(128, activation="tanh"), input_shape=input_shape),
+    #         Dense(64, activation="relu"),
+    #         Dense(output_length),
+    #     ]
+    # )
+    # models["BiLSTM"] = bilstm_model
 
-    # CNN-LSTM
-    cnn_lstm_model = Sequential(
-        [
-            Conv1D(64, kernel_size=3, activation="relu", input_shape=input_shape),
-            # MaxPooling1D(pool_size=2),
-            # Reshape((input_shape)),
-            LSTM(100, activation="tanh"),
-            Dense(100, activation="relu"),
-            Dense(output_length),
-        ]
-    )
-    # print(cnn_lstm_model.summary())
-    models["CNN-LSTM"] = cnn_lstm_model
+    # # CNN-LSTM
+    # cnn_lstm_model = Sequential(
+    #     [
+    #         Conv1D(64, kernel_size=3, activation="relu", input_shape=input_shape),
+    #         # MaxPooling1D(pool_size=2),
+    #         # Reshape((input_shape)),
+    #         LSTM(100, activation="tanh"),
+    #         Dense(100, activation="relu"),
+    #         Dense(output_length),
+    #     ]
+    # )
+    # # print(cnn_lstm_model.summary())
+    # models["CNN-LSTM"] = cnn_lstm_model
 
-    # ANN
-    ann_model = Sequential(
-        [
-            Flatten(input_shape=input_shape),
-            Dense(100, activation="relu"),
-            Dense(100, activation="relu"),
-            Dense(output_length),
-        ]
-    )
-    models["ANN"] = ann_model
+    # # ANN
+    # ann_model = Sequential(
+    #     [
+    #         Flatten(input_shape=input_shape),
+    #         Dense(100, activation="relu"),
+    #         Dense(100, activation="relu"),
+    #         Dense(output_length),
+    #     ]
+    # )
+    # models["ANN"] = ann_model
 
     return models
 
@@ -154,9 +154,9 @@ def train_and_evaluate(
             batch_size=batch_size,
             validation_data=(X_test, y_test),
             callbacks=[early_stopping],  # Add the early stopping callback
-            verbose=0,
+            verbose=1,
         )
-        results[name] = model.evaluate(X_test, y_test, verbose=0)
+        results[name] = model.evaluate(X_test, y_test, verbose=1)
         # print(f'{name} Test Loss: {results[name][0]}, Test MSE: {results[name][1]}')  # Print both loss and MSE
 
         # Save the model
@@ -183,7 +183,7 @@ def train_and_evaluate(
 def forecast(models, X, pred_length, seq_length):
     forecasts = {}
     for name, model in models.items():
-        forecast = model.predict(X[-1].reshape(1, seq_length, X.shape[2]), verbose=0)
+        forecast = model.predict(X[-1].reshape(1, seq_length, X.shape[2]), verbose=1)
         # print(np.array(forecast).shape)
         # forecasts[name] = scaler.inverse_transform(forecast).flatten()
         # forecasts[name] = scaler_target.inverse_transform(forecast).flatten()
@@ -195,11 +195,19 @@ def forecast(models, X, pred_length, seq_length):
 def forecasts(models, X, pred_length, seq_length):
     forecasts = {name: [] for name in models.keys()}
     for i in range(len(X) - seq_length):
-        input_sequence = X[i : i + seq_length]
+        input_sequence = X[i].reshape((1, seq_length, 1))
+        # print("input sequene: ", input_sequence)
+        # print("input sequene: ", input_sequence.shape)
+        if i >= 20:
+            break
         for name, model in models.items():
+            # print("reshaped input: ", input_sequence)
+            print(f"Forecating {i} segment over {len(X)} for {name} for {pred_length}-hour")
+            print("reshaped input: ", input_sequence.shape)
+            print("prediction process: ", 100*i/len(X))
             forecast = model.predict(
-                input_sequence.reshape(1, seq_length, input_sequence.shape[1]),
-                verbose=0,
+                input_sequence,
+                verbose=1,
             )
             forecasts[name].append(
                 forecast.flatten()
@@ -273,7 +281,7 @@ def plot_training_history(history, name, forecast_hours, key):
     plt.ylabel("MSE")
     plt.legend()
     plt.grid(True)
-    plt.show()
+    # plt.show()
 
 
 def plot_forecasts(data, forecasts, pred_length, title):
@@ -509,16 +517,11 @@ for forecast_length in pred_lengths:
 """# Forecast"""
 
 forecast_results_scaled = {}
-for forecast_length in pred_lengths:
-    for i, key in enumerate(X_train.keys()):
-        if (
-            str(forecast_length)
-        ) in key:  ### align length of forecast with segments of data
-            ## Make forecast and plot
-            forecast_results_scaled[key] = forecast(
-                models[key], X_test_scaled[key], forecast_length, seq_length
-            )  ## Making prediction of last segement   [OK]
-            ## Create plots   [Check]
+for i, key in enumerate(X_train.keys()):
+    ## Make forecast and plot
+    forecast_results_scaled[key] = forecasts(
+        models[key], X_test_scaled[key], key, seq_length
+    )
 
 print(forecast_results_scaled)
 
