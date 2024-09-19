@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import scipy.constants as const
 
 
 class DempsterShafer:
@@ -51,6 +50,7 @@ class DempsterShafer:
         # print("Distance: ", distance_matrix)
         probability_matrix = self.probability_matrix(distance_matrix)
         # print("Prob: ", probability_matrix)
+
         if self.is_uncertain:
             shannon_entropy = self.shannon_entropy(probability_matrix)
             discount_factor = self.discounting_factor(shannon_entropy)
@@ -68,7 +68,7 @@ class DempsterShafer:
             )
 
         if hasattr(self, "hypotheses") and self.hypotheses:
-            print("final mass: ", final_mass_function)
+            # print("final mass: ", final_mass_function)
             result_df = pd.DataFrame(
                 {
                     hypothesis: [final_mass_function[i]]
@@ -198,6 +198,7 @@ class DempsterShafer:
                 The combined mass function matrix with shape (1, N+1).
         """
         num_samplings, num_hypos = discounted_bpa.shape[1], discounted_bpa.shape[0]
+        # num_samplings, num_hypos = self.num_samples, self.num_hypos
         ds = np.zeros((num_samplings, num_hypos))
         # print("DS: ", ds)
         for i in range(num_samplings):
@@ -209,7 +210,7 @@ class DempsterShafer:
         return self.combined_mass_function(ds)
 
     # Method to get combined mass function
-    def combined_mass_function(self, mass_func):
+    def combined_mass_function_uncertain(self, mass_func):
         """
         Calculates the combined mass function based on the given mass function.
 
@@ -253,5 +254,43 @@ class DempsterShafer:
             step_mass_function[j + 1, num_hypos - 1] = inter_mass_func[
                 j, num_hypos - 1, num_hypos - 1
             ] / (1 - k[j])
+        # print("Step: ", step_mass_function[-1, :])
+        return step_mass_function[-1, :]
+
+    # Method to get combined mass function
+    def combined_mass_function(self, mass_func):
+        """
+        Calculates the combined mass function based on the given mass function.
+
+        Args:
+            mass_func (ndarray): The mass function to be combined.
+
+        Returns:
+            ndarray: The combined mass function.
+
+        """
+        # print("Mass: ", mass_func)
+        num_hypos = mass_func.shape[1]
+        inter_steps = mass_func.shape[0] - 1
+        step_mass_function = np.zeros_like(mass_func)
+        step_mass_function[0, :] = mass_func[0, :]
+
+        inter_mass_func = np.zeros((inter_steps, num_hypos, num_hypos))
+        # Conflict coefficient
+        k = np.zeros(inter_steps)
+
+        for j in range(inter_steps):
+            # Calculate the intermediate combined mass function of a pair of consecutive pieces of evidence
+            inter_mass_func[j, :, :] = np.outer(
+                step_mass_function[j, :], mass_func[j + 1, :]
+            )
+
+            # print("Inter mass: ", inter_mass_func)
+            # Calculate the conflict coefficient
+            d = np.diag(inter_mass_func[j])
+            # print("d: ", d)
+            k[j] = np.sum(inter_mass_func[j]) - np.sum(d)
+
+            step_mass_function[j + 1, :] = d / (1 - k[j])
         # print("Step: ", step_mass_function[-1, :])
         return step_mass_function[-1, :]
