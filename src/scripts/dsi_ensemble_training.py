@@ -50,7 +50,7 @@ def create_models(input_shape, output_length):
             Dense(output_length),
         ]
     )
-    models["1D CNN"] = cnn_model
+    models["1D-CNN"] = cnn_model
 
     # LSTM
     lstm_model = Sequential(
@@ -65,50 +65,50 @@ def create_models(input_shape, output_length):
     )
     models["LSTM"] = lstm_model
 
-    # # GRU
-    # gru_model = Sequential(
-    #     [
-    #         GRU(128, activation="tanh", input_shape=input_shape),
-    #         Dense(64, activation="relu"),
-    #         Dense(output_length),
-    #     ]
-    # )
-    # models["GRU"] = gru_model
+    # GRU
+    gru_model = Sequential(
+        [
+            GRU(128, activation="tanh", input_shape=input_shape),
+            Dense(64, activation="relu"),
+            Dense(output_length),
+        ]
+    )
+    models["GRU"] = gru_model
 
-    # # BiLSTM
-    # bilstm_model = Sequential(
-    #     [
-    #         Bidirectional(LSTM(128, activation="tanh"), input_shape=input_shape),
-    #         Dense(64, activation="relu"),
-    #         Dense(output_length),
-    #     ]
-    # )
-    # models["BiLSTM"] = bilstm_model
+    # BiLSTM
+    bilstm_model = Sequential(
+        [
+            Bidirectional(LSTM(128, activation="tanh"), input_shape=input_shape),
+            Dense(64, activation="relu"),
+            Dense(output_length),
+        ]
+    )
+    models["BiLSTM"] = bilstm_model
 
-    # # CNN-LSTM
-    # cnn_lstm_model = Sequential(
-    #     [
-    #         Conv1D(64, kernel_size=3, activation="relu", input_shape=input_shape),
-    #         # MaxPooling1D(pool_size=2),
-    #         # Reshape((input_shape)),
-    #         LSTM(100, activation="tanh"),
-    #         Dense(100, activation="relu"),
-    #         Dense(output_length),
-    #     ]
-    # )
-    # # print(cnn_lstm_model.summary())
-    # models["CNN-LSTM"] = cnn_lstm_model
+    # CNN-LSTM
+    cnn_lstm_model = Sequential(
+        [
+            Conv1D(64, kernel_size=3, activation="relu", input_shape=input_shape),
+            # MaxPooling1D(pool_size=2),
+            # Reshape((input_shape)),
+            LSTM(100, activation="tanh"),
+            Dense(100, activation="relu"),
+            Dense(output_length),
+        ]
+    )
+    # print(cnn_lstm_model.summary())
+    models["CNN-LSTM"] = cnn_lstm_model
 
-    # # ANN
-    # ann_model = Sequential(
-    #     [
-    #         Flatten(input_shape=input_shape),
-    #         Dense(100, activation="relu"),
-    #         Dense(100, activation="relu"),
-    #         Dense(output_length),
-    #     ]
-    # )
-    # models["ANN"] = ann_model
+    # ANN
+    ann_model = Sequential(
+        [
+            Flatten(input_shape=input_shape),
+            Dense(100, activation="relu"),
+            Dense(100, activation="relu"),
+            Dense(output_length),
+        ]
+    )
+    models["ANN"] = ann_model
 
     return models
 
@@ -161,9 +161,9 @@ def train_and_evaluate(
 
         # Save the model
         model_filename = (
-            f"LIVERPOOL_forecast_PM2.5_{seq_length}_{forecast_hours}_{name}.h5"
+            f"LIDCOMBE_PAS_DSI_forecast_PM2.5_{seq_length}_{forecast_hours}_{name}.h5"
         )
-        save_dir = "./models"
+        save_dir = "./models/PAS_DSI"
         model.save(os.path.join(save_dir, model_filename))
         print(
             f"Model {name} for {forecast_hours}-hour forecast saved as {model_filename}"
@@ -202,9 +202,11 @@ def forecasts(models, X, pred_length, seq_length):
             break
         for name, model in models.items():
             # print("reshaped input: ", input_sequence)
-            print(f"Forecating {i} segment over {len(X)} for {name} for {pred_length}-hour")
+            print(
+                f"Forecating {i} segment over {len(X)} for {name} for {pred_length}-hour"
+            )
             print("reshaped input: ", input_sequence.shape)
-            print("prediction process: ", 100*i/len(X))
+            print("prediction process: ", 100 * i / len(X))
             forecast = model.predict(
                 input_sequence,
                 verbose=1,
@@ -319,8 +321,13 @@ def plot_forecasts(data, forecasts, pred_length, title):
 """
 
 data = {}
+# data["station"] = pd.read_csv(
+#     "./data/processed/LIVERPOOL_PM2.5_hourly.csv",
+#     index_col="datetime",
+#     parse_dates=True,
+# )
 data["station"] = pd.read_csv(
-    "./data/processed/LIVERPOOL_PM2.5_hourly.csv",
+    "./data/processed/LIDCOMBE_PAS_DSI_hourly.csv",
     index_col="datetime",
     parse_dates=True,
 )
@@ -373,10 +380,13 @@ def create_sequences_ser(data, data_indices, seq_length, pred_length):
     return np.array(X), np.array(y), X_indices, y_indices
 
 
-start_date = "2018-01-01 01:00"
-end_date = "2023-10-01 00:00"
+# start_date = "2018-01-01 01:00"
+# end_date = "2023-10-01 00:00"
 
-liv_data = data["station"][start_date:end_date]
+# liv_data = data["station"][start_date:end_date]
+liv_data = data["station"][["PM2.5_DSI"]]
+
+# liv_data = data["station"][["HUMID_DSI","TEMP_DSI","PM2.5_DSI"]]
 # liv_data_indices = data['station'].index
 
 X = dict()
@@ -393,7 +403,7 @@ for i in pred_lengths:
 """# Split data"""
 
 # Define the split ratio
-split_ratio = 0.9
+split_ratio = 0.8
 
 
 def train_test_split_ts(X, y, split_ratio=0.8):

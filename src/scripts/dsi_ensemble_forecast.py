@@ -7,7 +7,8 @@ import tensorflow as tf
 from tensorflow import keras
 from sklearn.preprocessing import MinMaxScaler
 
-# from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model
+
 # from tensorflow.keras.models import Sequential
 # from tensorflow.keras.layers import (
 #     Dense,
@@ -39,8 +40,10 @@ import matplotlib.pyplot as plt
 def forecasts(models, X, pred_length, seq_length):
     forecasts = {name: [] for name in models.keys()}
     for i in range(len(X) - seq_length):
+        print("input sequene before: ", X[i])
+
         input_sequence = X[i].reshape((1, seq_length, 1))
-        # print("input sequene: ", input_sequence)
+        print("input sequene: ", input_sequence)
         # print("input sequene: ", input_sequence.shape)
         # if i >= 2:
         #     break
@@ -118,9 +121,9 @@ def evaluate_forecasts(forecasts_df, y_test_df):
                 "Segment": segment,
                 "RMSE": rmse,
                 "MAE": mae,
-                "Pearson's r": pearson_r,
-                "R²": r2,
-                "Max Error": max_error_value,
+                "Pearson_r": pearson_r,
+                "R2": r2,
+                "Max_Error": max_error_value,
                 "MAPE": mape,
             }
         )
@@ -135,7 +138,7 @@ def evaluate_forecasts(forecasts_df, y_test_df):
 def statistics_to_dataframe(statistics, pred_length):
     df = pd.DataFrame(statistics).T
     df.index.name = "Model"
-    df.columns = ["RMSE", "MAE", "Pearson's r", "R²", "Max Error", "MAPE"]
+    df.columns = ["RMSE", "MAE", "Pearson_r", "R2", "Max_Error", "MAPE"]
     df["Pred. Length"] = pred_length
     return df
 
@@ -178,8 +181,13 @@ def plot_forecasts(data, forecasts, pred_length, title):
 """
 
 data = {}
+# data["station"] = pd.read_csv(
+#     "./data/processed/LIVERPOOL_PM2.5_hourly.csv",
+#     index_col="datetime",
+#     parse_dates=True,
+# )
 data["station"] = pd.read_csv(
-    "./data/processed/LIVERPOOL_PM2.5_hourly.csv",
+    "./data/processed/LIDCOMBE_PAS_DSI_hourly.csv",
     index_col="datetime",
     parse_dates=True,
 )
@@ -188,10 +196,11 @@ data["station"].index = data["station"].index.strftime("%Y-%m-%d %H:%M:%S")
 # data['station'].head()
 
 
-start_date = "2018-01-01 01:00"
-end_date = "2023-10-01 00:00"
+# start_date = "2018-01-01 01:00"
+# end_date = "2023-10-01 00:00"
 
-liv_data = data["station"][start_date:end_date]
+liv_data = data["station"][["PM2.5_DSI"]]
+# liv_data = data["station"][start_date:end_date]
 # liv_data_indices = data['station'].index
 
 # Assuming 'data' is a DataFrame with your time series data
@@ -265,14 +274,14 @@ for key, value in y_test_indices.items():
     )
     y_test_df.index.name = "Segment"
     y_test_df.to_csv(
-        f"./forecasts/test/test_indices_forecast{key}.csv", header=True, index=True
+        f"./forecasts_dsi/test/test_indices_forecast{key}.csv", header=True, index=True
     )
 
 
 """# Split data"""
 
 # Define the split ratio
-split_ratio = 0.9
+split_ratio = 0.8
 
 
 def train_test_split_ts(X, y, split_ratio=0.8):
@@ -378,18 +387,16 @@ pred_lengths = [6, 12]
 model_names = ["1D-CNN", "ANN", "BiLSTM", "LSTM", "CNN-LSTM", "GRU"]
 models = {}
 
-# for pred_length in pred_lengths:
-#     models[pred_length] = {}
-#     for name in model_names:
-#         filepath = (
-#             f"./models/LIVERPOOL_forecast_PM2.5_{seq_length}_{pred_length}_{name}.h5"
-#         )
-#         print(filepath)
-#         models[pred_length][name] = load_model(
-#             filepath, custom_objects={"mse": "mean_squared_error"}
-#         )
-#         models[pred_length][name].compile(optimizer="adam", loss="mse", metrics=["mse"])
-# print("models: ", models)
+for pred_length in pred_lengths:
+    models[pred_length] = {}
+    for name in model_names:
+        filepath = f"./models/PAS_DSI/LIDCOMBE_PAS_DSI_forecast_PM2.5_{seq_length}_{pred_length}_{name}.h5"
+        print(filepath)
+        models[pred_length][name] = load_model(
+            filepath, custom_objects={"mse": "mean_squared_error"}
+        )
+        models[pred_length][name].compile(optimizer="adam", loss="mse", metrics=["mse"])
+print("models: ", models)
 # print("models: ", models[12])
 
 # print("models: ", models['12'])
@@ -398,113 +405,113 @@ models = {}
 
 forecast_results_scaled = {}
 
-# for pred_length in pred_lengths:
-#     ## Make forecast and
-#     print("forecast ", pred_length)
-#     print("forecast ", models[pred_length])
-#     print("XXXXX:", X_test_scaled[str(pred_length)])
-#     forecast_results_scaled[str(pred_length)] = forecasts(
-#         models[pred_length], X_test_scaled[str(pred_length)], pred_length, seq_length
-#     )
+for pred_length in pred_lengths:
+    ## Make forecast and
+    print("forecast ", pred_length)
+    print("forecast ", models[pred_length])
+    print("XXXXX:", X_test_scaled[str(pred_length)])
+    forecast_results_scaled[str(pred_length)] = forecasts(
+        models[pred_length], X_test_scaled[str(pred_length)], pred_length, seq_length
+    )
 
-# print(forecast_results_scaled)
+print(forecast_results_scaled)
 
 """## Inverse forecast scaling"""
 
 # prompt: inverse the scaling of the forecast result from the variable forecast_resutls_scaled from the scaler scaler_X
 
-# forecast_results = {}
-# y_test_inverse = {}
-# for key in forecast_results_scaled.keys():
-#     forecast_results[key] = {}
-#     for model_name, forecast in forecast_results_scaled[key].items():
-#         # Print to check shapes before transformation
-#         print(f"Forecast shape before inverse transform: {forecast.shape}")
+forecast_results = {}
+y_test_inverse = {}
+for key in forecast_results_scaled.keys():
+    forecast_results[key] = {}
+    for model_name, forecast in forecast_results_scaled[key].items():
+        # Print to check shapes before transformation
+        print(f"Forecast shape before inverse transform: {forecast.shape}")
 
-#         # Reshape forecast to fit scaler's expected input
-#         # Assuming the original data had 6 features, reshape to (num_samples, 6)
-#         num_samples = forecast.shape[0]
-#         forecast_reshaped = forecast.reshape(
-#             num_samples, -1
-#         )  # -1 infers the number of features (6 in this case)
+        # Reshape forecast to fit scaler's expected input
+        # Assuming the original data had 6 features, reshape to (num_samples, 6)
+        num_samples = forecast.shape[0]
+        forecast_reshaped = forecast.reshape(
+            num_samples, -1
+        )  # -1 infers the number of features (6 in this case)
 
-#         # Apply the inverse transform
-#         forecast_inverse_transformed = scaler[key].inverse_transform(forecast_reshaped)
+        # Apply the inverse transform
+        forecast_inverse_transformed = scaler[key].inverse_transform(forecast_reshaped)
 
-#         # Reshape back to the original forecast shape if needed
-#         # forecast_original_shape = forecast_inverse_transformed.reshape(forecast.shape)
+        # Reshape back to the original forecast shape if needed
+        # forecast_original_shape = forecast_inverse_transformed.reshape(forecast.shape)
 
-#         # Flatten the forecast result to match the desired output format
-#         forecast_results[key][model_name] = forecast_inverse_transformed
-#     # y_test_inverse_transformed = scaler[key].inverse_transform(
-#     #     y_test_scaled[key].reshape(num_samples, -1)
-#     # )
-#     # y_test_inverse[key] = y_test_inverse_transformed
-# print("forecast results: ", forecast_results)
-# print("y test: ", y_test)
+        # Flatten the forecast result to match the desired output format
+        forecast_results[key][model_name] = forecast_inverse_transformed
+    # y_test_inverse_transformed = scaler[key].inverse_transform(
+    #     y_test_scaled[key].reshape(num_samples, -1)
+    # )
+    # y_test_inverse[key] = y_test_inverse_transformed
+print("forecast results: ", forecast_results)
+print("y test: ", y_test)
 # print("y test shape:", y_test.shape())
 
-# for pred_length, models_forecast in forecast_results.items():
-#     for model, forecasts in models_forecast.items():
-#         reshaped_forecasts = forecasts.reshape(forecasts.shape[0], forecasts.shape[1])
-#         row_indices = [f"S{i+1}" for i in range(reshaped_forecasts.shape[0])]
-#         column_names = [f"F{i+1}" for i in range(reshaped_forecasts.shape[1])]
-#         forecasts_df = pd.DataFrame(
-#             reshaped_forecasts, index=row_indices, columns=column_names
-#         )
-#         forecasts_df.index.name = "Segment"
-#         forecasts_df.to_csv(
-#             f"./forecasts/forecast{pred_length}/LIVERPOOL_forecast_PM2.5_{seq_length}_{pred_length}_{model}.csv",
-#             header=True,
-#             index=True,
-#         )
+for pred_length, models_forecast in forecast_results.items():
+    for model, forecasts in models_forecast.items():
+        reshaped_forecasts = forecasts.reshape(forecasts.shape[0], forecasts.shape[1])
+        row_indices = [f"S{i+1}" for i in range(reshaped_forecasts.shape[0])]
+        column_names = [f"F{i+1}" for i in range(reshaped_forecasts.shape[1])]
+        forecasts_df = pd.DataFrame(
+            reshaped_forecasts, index=row_indices, columns=column_names
+        )
+        forecasts_df.index.name = "Segment"
+        forecasts_df.to_csv(
+            f"./forecasts_dsi/forecast{pred_length}/LIDCOMBE_PAS_DSI_forecast_{seq_length}_{pred_length}_{model}.csv",
+            header=True,
+            index=True,
+        )
 
-# for key, value in y_test.items():
-#     reshaped_test_data = value.reshape(value.shape[0], value.shape[1])
-#     row_indices = [f"S{i+1}" for i in range(reshaped_test_data.shape[0])]
-#     column_names = [f"OBS{i+1}" for i in range(reshaped_test_data.shape[1])]
-#     y_test_df = pd.DataFrame(
-#         reshaped_test_data, index=row_indices, columns=column_names
-#     )
-#     y_test_df.index.name = "Segment"
-#     y_test_df.to_csv(
-#         f"./forecasts/test/test_data_forecast{key}.csv", header=True, index=True
-#     )
+for key, value in y_test.items():
+    reshaped_test_data = value.reshape(value.shape[0], value.shape[1])
+    row_indices = [f"S{i+1}" for i in range(reshaped_test_data.shape[0])]
+    column_names = [f"OBS{i+1}" for i in range(reshaped_test_data.shape[1])]
+    y_test_df = pd.DataFrame(
+        reshaped_test_data, index=row_indices, columns=column_names
+    )
+    y_test_df.index.name = "Segment"
+    y_test_df.to_csv(
+        f"./forecasts_dsi/test/test_data_forecast{key}.csv", header=True, index=True
+    )
 
 
 """ Calculate statistics """
 
 statistics_results = {}
 
-# for pred_length, models_forecast in forecast_results.items():
-#     for model, forecasts in models_forecast.items():
-#         # Load forecasted values from CSV
-#         forecast_filepath = f"./forecasts/forecast{pred_length}/LIVERPOOL_forecast_PM2.5_{seq_length}_{pred_length}_{model}.csv"
-#         forecasts_df = pd.read_csv(forecast_filepath, index_col="Segment")
+for pred_length, models_forecast in forecast_results.items():
+    for model, forecasts in models_forecast.items():
+        # Load forecasted values from CSV
+        forecast_filepath = f"./forecasts_dsi/forecast{pred_length}/LIDCOMBE_PAS_DSI_forecast_{seq_length}_{pred_length}_{model}.csv"
+        forecasts_df = pd.read_csv(forecast_filepath, index_col="Segment")
 
-#         # Load the corresponding true values (y_test)
-#         y_test_filepath = f"./forecasts/test/test_data_forecast{pred_length}.csv"
-#         y_test_df = pd.read_csv(y_test_filepath, index_col="Segment")
+        # Load the corresponding true values (y_test)
+        y_test_filepath = f"./forecasts_dsi/test/test_data_forecast{pred_length}.csv"
+        y_test_df = pd.read_csv(y_test_filepath, index_col="Segment")
 
-#         # Evaluate forecasts and calculate statistics
-#         stats_df = evaluate_forecasts(forecasts_df, y_test_df)
+        # Evaluate forecasts and calculate statistics
+        stats_df = evaluate_forecasts(forecasts_df, y_test_df)
 
-#         # Save the statistics to a CSV file
-#         stats_filename = f"./stats/forecast{pred_length}/LIVERPOOL_stats_PM2.5_{seq_length}_{pred_length}_{model}.csv"
-#         os.makedirs(os.path.dirname(stats_filename), exist_ok=True)
-#         stats_df.to_csv(stats_filename, index=False)
+        # Save the statistics to a CSV file
+        stats_filename = f"./forecasts_dsi/stats/complete/forecast{pred_length}/LIDCOMBE_PAS_DSI_forecast_{seq_length}_{pred_length}_{model}.csv"
+        os.makedirs(os.path.dirname(stats_filename), exist_ok=True)
+        stats_df.to_csv(stats_filename, index=False)
 
-#         # Store the statistics in the dictionary
-#         statistics_results[f"{model}_{pred_length}"] = stats_df
+        # Store the statistics in the dictionary
+        statistics_results[f"{model}_{pred_length}"] = stats_df
 
-#         print(f"Statistics saved for model {model} with forecast length {pred_length}.")
+        print(f"Statistics saved for model {model} with forecast length {pred_length}.")
 
-# # Display the statistics
-# for key, stats in statistics_results.items():
-#     print(f"Statistics for {key}:")
-#     for metric, value in stats.items():
-#         print(f"{metric}: {value}")
-#     print("\n")
+# Display the statistics
+for key, stats in statistics_results.items():
+    print(f"Statistics for {key}:")
+    for metric, value in stats.items():
+        print(f"{metric}: {value}")
+    print("\n")
 
 """## Plot forecast"""
 
