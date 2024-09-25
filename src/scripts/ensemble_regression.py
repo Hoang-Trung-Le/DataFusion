@@ -91,13 +91,13 @@ def create_sequences_ser(data, seq_length):
     X, X_indices = [], []
     data_indices = data.index.values
     for i in range(len(data) - seq_length + 1):
-        # Extract input sequence (all columns) and target values (LIVERPOOL_PM2.5)
+        # Extract input sequence (all columns) and target values (PM2.5_DSI)
         X.append(
             data.iloc[i : (i + seq_length)].values
         )  # Use all columns for input sequences
         # y.append(
         #     data.iloc[(i + seq_length) : (i + seq_length + pred_length)].values
-        # )  # Use LIVERPOOL_PM2.5 for targets
+        # )  # Use PM2.5_DSI for targets
         X_indices.append(data_indices[i : (i + seq_length)])
         # y_indices.append(
         #     data_indices[(i + seq_length) : (i + seq_length + pred_length)]
@@ -307,26 +307,26 @@ def perform_grid_search_all_models(X_train, y_train, X_test):
 
 
 df = pd.read_csv(
-    "./data/processed/LIVERPOOL_PM2.5_hourly.csv",
+    "./data/processed/LIDCOMBE_PAS_DSI_hourly.csv",
     index_col="datetime",
     parse_dates=True,
 )
-df = df[["LIVERPOOL_PM2.5"]]
+df = df[["PM2.5_DSI"]]
 
 # Print the dummy DataFrame
 print(df)
 seq_length = 12
 # Step 1: Create lag features
-df = create_lag_features(df, "LIVERPOOL_PM2.5", num_lags=seq_length)
+df = create_lag_features(df, "PM2.5_DSI", num_lags=seq_length)
 print("df lag:\n", df)
 # Step 2: Create target columns for 6 and 12 hours ahead
-df = create_target_columns(df, "LIVERPOOL_PM2.5", forecast_horizons=[6, 12])
+df = create_target_columns(df, "PM2.5_DSI", forecast_horizons=[6, 12])
 
 # Step 3: Drop rows with NaN values due to lagging
 df = df.dropna()
 
 
-targets = {6: "target_LIVERPOOL_PM2.5_6h", 12: "target_LIVERPOOL_PM2.5_12h"}
+targets = {6: "target_PM2.5_DSI_6h", 12: "target_PM2.5_DSI_12h"}
 best_models = {}
 X_train, X_test, y_train, y_test, y_pred = {}, {}, {}, {}, {}
 
@@ -339,8 +339,8 @@ for pred_horizon, target_col in targets.items():
         y_test[pred_horizon],
     ) = split_train_test(
         df,
-        features=[f"lag_LIVERPOOL_PM2.5_{i}" for i in range(1, 13)],
-        targets=[f"target_LIVERPOOL_PM2.5_{pred_horizon}h"],
+        features=[f"lag_PM2.5_DSI_{i}" for i in range(1, 13)],
+        targets=[f"target_PM2.5_DSI_{pred_horizon}h"],
     )
     print("X test:\n", X_test)
 
@@ -348,8 +348,8 @@ for pred_horizon, target_col in targets.items():
         y_test[pred_horizon][target_col],
         pred_horizon,
         "test",
-        f"./forecasts_ensemble/test/test1_data_forecast{pred_horizon}.csv",
-        f"./forecasts_ensemble/test/test1_indices_forecast{pred_horizon}.csv",
+        f"./forecasts_ensemble_dsi/test/test1_data_forecast{pred_horizon}.csv",
+        f"./forecasts_ensemble_dsi/test/test1_indices_forecast{pred_horizon}.csv",
     )
 
     # Step 5: Perform grid search for best model
@@ -390,21 +390,21 @@ for pred_horizon, target_col in targets.items():
             y_pred_df[target_col],
             pred_horizon,
             "forecast",
-            f"./forecasts_ensemble/forecast{pred_horizon}/LIVERPOOL_forecast_{seq_length}_{pred_horizon}_{model_name}.csv",
+            f"./forecasts_ensemble_dsi/forecast{pred_horizon}/LIDCOMBE_PAS_DSI_forecast_{seq_length}_{pred_horizon}_{model_name}.csv",
             f"forecast_indices_{pred_horizon}h.csv",
         )
         # Step 7: Evaluate the predictions
         forecasts_df = pd.read_csv(
-            f"./forecasts_ensemble/forecast{pred_horizon}/LIVERPOOL_forecast_{seq_length}_{pred_horizon}_{model_name}.csv",
+            f"./forecasts_ensemble_dsi/forecast{pred_horizon}/LIDCOMBE_PAS_DSI_forecast_{seq_length}_{pred_horizon}_{model_name}.csv",
             index_col="Segment",
         )
         observations_df = pd.read_csv(
-            f"./forecasts_ensemble/test/test1_data_forecast{pred_horizon}.csv",
+            f"./forecasts_ensemble_dsi/test/test1_data_forecast{pred_horizon}.csv",
             index_col="Segment",
         )
         evaluation_results = evaluate_forecasts(forecasts_df, observations_df)
         evaluation_results.to_csv(
-            f"./forecasts_ensemble/stats/complete/forecast{pred_horizon}/LIVERPOOL_stats_{seq_length}_{pred_horizon}_{model_name}.csv",
+            f"./forecasts_ensemble_dsi/stats/complete/forecast{pred_horizon}/LIDCOMBE_PAS_DSI_stats_{seq_length}_{pred_horizon}_{model_name}.csv",
             index=False,
         )
         # evaluation_results_df = pd.DataFrame(evaluation_results, index=[pred_horizon])
