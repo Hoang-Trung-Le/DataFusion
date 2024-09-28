@@ -244,6 +244,10 @@ df = pd.read_csv(
 )
 df = df[["LIVERPOOL_PM2.5"]]
 
+start_date = "2018-01-01 01:00"
+end_date = "2023-10-01 00:00"
+df = df[start_date:end_date]
+
 # Print the dummy DataFrame
 print(df)
 seq_length = 12
@@ -273,14 +277,24 @@ for pred_horizon, target_col in targets.items():
         features=[f"lag_LIVERPOOL_PM2.5_{i}" for i in range(1, 13)],
         targets=[f"target_LIVERPOOL_PM2.5_{pred_horizon}h"],
     )
+
     print("X test:\n", X_test)
+    print("y test:\n", y_test[pred_horizon][target_col])
+    # Add 6 hours to the datetime index
+    y_test[pred_horizon][target_col].index = y_test[pred_horizon][
+        target_col
+    ].index + pd.DateOffset(hours=pred_horizon)
+    print("y test:\n", y_test[pred_horizon][target_col])
+
+    # print("X train:\n", X_train)
+    # print("y train:\n", y_train)
 
     save_test_data(
         y_test[pred_horizon][target_col],
         pred_horizon,
         "test",
-        f"./forecasts_ensemble/test/test_data_forecast{pred_horizon}.csv",
-        f"./forecasts_ensemble/test/test_indices_forecast{pred_horizon}.csv",
+        f"./forecasts_ensemble/test/test1_data_forecast{pred_horizon}.csv",
+        f"./forecasts_ensemble/test/test1_indices_forecast{pred_horizon}.csv",
     )
 
     # Step 5: Perform grid search for best model
@@ -309,21 +323,21 @@ for pred_horizon, target_col in targets.items():
         y_pred_df[target_col],
         pred_horizon,
         "forecast",
-        f"./forecasts_ensemble/forecast{pred_horizon}/LIVERPOOL_forecast_{seq_length}_{pred_horizon}_XGB.csv",
+        f"./forecasts_ensemble/forecast{pred_horizon}/LIVERPOOL_forecast1_{seq_length}_{pred_horizon}_XGB.csv",
         f"forecast_indices_{pred_horizon}h.csv",
     )
     # Step 7: Evaluate the predictions
     forecasts_df = pd.read_csv(
-        f"./forecasts_ensemble/forecast{pred_horizon}/LIVERPOOL_forecast_{seq_length}_{pred_horizon}_XGB.csv",
+        f"./forecasts_ensemble/forecast{pred_horizon}/LIVERPOOL_forecast1_{seq_length}_{pred_horizon}_XGB.csv",
         index_col="Segment",
     )
     observations_df = pd.read_csv(
-        f"./forecasts_ensemble/test/test_data_forecast{pred_horizon}.csv",
+        f"./forecasts_ensemble/test/test1_data_forecast{pred_horizon}.csv",
         index_col="Segment",
     )
     evaluation_results = evaluate_forecasts(forecasts_df, observations_df)
     evaluation_results.to_csv(
-        f"./forecasts_ensemble/stats/complete/forecast{pred_horizon}/LIVERPOOL_stats_{seq_length}_{pred_horizon}_XGB.csv",
+        f"./forecasts_ensemble/stats/complete/forecast{pred_horizon}/LIVERPOOL_stats1_{seq_length}_{pred_horizon}_XGB.csv",
         index=False,
     )
     # evaluation_results_df = pd.DataFrame(evaluation_results, index=[pred_horizon])
